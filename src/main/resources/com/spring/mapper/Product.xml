@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.spring.mapper.Product">
+  
+  <!-- 상품 등록 -->
+  	<insert id="productinsert">
+  		<selectKey resultType="int" keyProperty="product_num" order="AFTER"> <!--  vo객체에 시퀀스로 자동증가 시켰던 컬럼값을 저장하기위해서 -->
+  		
+  			SELECT MAX(product_num) FROM product
+  		
+  		</selectKey>
+  		insert into product(product_num,cateCode, p_code, p_name,  p_price, p_Discount, p_info, p_content, p_Stock)
+		values(Product_SEQ.NEXTVAL,#{cateCode},#{p_code}, #{p_name},#{p_price},#{p_Discount},#{p_info},#{p_content},#{p_Stock})
+
+  	</insert>
+  <!-- 카테고리 리스트 -->
+  	<select id="cateList" resultType="com.spring.domain.CateVO">
+  	
+  		select level, cateName, cateCode, cateCodeRef from p_cate
+    start with cateCodeRef is null connect by prior cateCode = cateCodeRef
+  	
+  	</select>
+  	<!-- 상품 리스트 -->
+  	<select id="productList" resultType="com.spring.domain.ProductVO">
+  	
+	  	<![CDATA[
+		select * from(
+		    select /*+INDEX_DESC(product SYS_C007724)*/ rownum as rn,product_num , p_code,p_name, p_Stock,  
+		        (select cateName from p_cate where product.cateCode = p_cate.cateCode) cateName,p_regdate,p_Discount,p_price
+		    from product 
+		    where 
+		]]>    
+		
+		    <if test="keyword != null">
+		    
+			    p_name like '%' || #{keyword} || '%' and
+			    
+		    </if>
+		     
+		<![CDATA[    
+		    rownum <= #{pageNum} * #{amount} 
+		    )
+		where rn > (#{pageNum} -1) * #{amount}		  	
+  		]]>
+  	
+  	</select>
+  	
+  	<!-- 상품 총 개수 -->
+  	<select id="totalList" resultType="int">
+  	
+  		select count(*) from product
+  		
+  		 <if test="keyword != null">
+  		
+  			where p_name like '%' || #{keyword} || '%'
+  		</if> 
+  		
+  	</select> 
+  	
+  <!-- 	상품 조회 페이지 -->
+	<select id="productDetail" resultType="com.spring.domain.ProductVO">
+	
+		select (select cateName from p_cate where product.cateCode = p_cate.cateCode) cateName,p_regdate, 
+			product_num , p_code,p_name, p_Stock,p_price,p_Discount,p_info,p_content,p_update,cateCode
+		from product where product_num = #{product_num}
+	
+	</select>
+  	<!-- 상품 정보 수정 -->
+	<update id="proModify">
+		
+		update product set p_name = #{p_name},p_Stock = #{p_Stock}, p_Discount = #{p_Discount}, p_info = #{p_info}, 
+		p_content = #{p_content}, p_update = sysdate, cateCode = #{cateCode}, p_price = #{p_price} 
+		where product_num = ${product_num}
+		
+	</update>
+	<!-- 상품 정보 삭제 -->
+	<delete id="proDelete">
+	
+		delete from product where product_num = #{product_num}
+	
+	</delete> 
+	<!-- 이미지 등록 -->
+	<insert id="imageinsert">
+	
+		insert into image(product_num, uploadFileName, uploadPath, uuid) values (#{product_num}, #{uploadFileName}, #{uploadPath}, #{uuid})
+	
+	</insert>
+	<select id="getimgList" resultType="com.spring.domain.ImageVO">
+	
+		select * from image where product_num = #{product_num}
+	
+	</select>
+	<!-- 상품 정보 -->
+	<select id="getGoodsInfo" resultType="com.spring.domain.ProductVO">
+			select c.cateName,a.p_regdate, 
+			a.product_num , a.p_code,a.p_name, a.p_Stock,a.p_price,a.p_Discount,a.p_info,a.p_content,a.p_update,a.cateCode
+		from product a
+		join p_cate c on a.cateCode = c.cateCode
+		 where product_num = #{product_num}
+	
+	</select>
+	
+  </mapper>
